@@ -49,15 +49,15 @@ ssh your-user@your-nas-ip
 Clone and run:
 
 ```bash
-sudo git clone https://github.com/pit-mce/synology-photos-fix.git /tmp/synology-photos-fix
-cd /tmp/synology-photos-fix
+sudo git clone https://github.com/pitmc/fix-synology-photos-thumbnails.git /tmp/fix-synology-photos-thumbnails
+cd /tmp/fix-synology-photos-thumbnails
 sudo sh fix-synology-photos.sh
 ```
 
 Or download directly:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/pit-mce/synology-photos-fix/main/fix-synology-photos.sh -o /tmp/fix-synology-photos.sh
+curl -sL https://raw.githubusercontent.com/pitmc/fix-synology-photos-thumbnails/main/fix-synology-photos.sh -o /tmp/fix-synology-photos.sh
 sudo sh /tmp/fix-synology-photos.sh
 ```
 
