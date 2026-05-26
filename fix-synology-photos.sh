@@ -86,6 +86,10 @@ step_stop_photos() {
 step_delete_film_files() {
   log_info "Step 2: Deleting video conversion files (SYNOPHOTO_FILM)..."
   log_info "These are transcoded video copies, not originals."
+  echo ""
+  log_info "To monitor in another terminal:"
+  printf "  ${CYAN}ps aux | grep \"find.*SYNOPHOTO\" | grep -v grep${NC}\n"
+  echo ""
 
   if [ -n "$PHOTO_SHARED" ]; then
     find "$PHOTO_SHARED" -name "SYNOPHOTO_FILM_H.mp4" -exec rm -rf {} + 2>/dev/null || true
@@ -104,6 +108,11 @@ step_delete_eadir() {
   log_info "Step 3: Deleting all @eaDir directories (thumbnail/metadata cache)..."
   log_warn "This forces full thumbnail regeneration. May take 30-60 min on large libraries."
   log_info "@eaDir NEVER contains original photos — only cache data."
+  echo ""
+  log_info "To monitor progress in another terminal:"
+  printf "  ${CYAN}ps aux | grep \"find.*eaDir\\|rm.*eaDir\" | grep -v grep | cut -c1-120${NC}\n"
+  log_info "When no output appears, it finished."
+  echo ""
 
   if [ -n "$PHOTO_SHARED" ]; then
     log_info "Cleaning $PHOTO_SHARED ..."
@@ -133,6 +142,11 @@ step_clean_db() {
 step_reset_index_stage() {
   log_info "Step 5: Resetting index_stage to force thumbnail regeneration..."
   log_warn "This updates ~250k+ rows. May take 5-10 minutes. Do not interrupt."
+  echo ""
+  log_info "To verify progress in another terminal:"
+  printf "  ${CYAN}sudo -u postgres psql -d synofoto -c \"SELECT index_stage, COUNT(*) FROM unit GROUP BY index_stage;\"${NC}\n"
+  log_info "When index_stage 79/127/255 disappear and 71 grows, it's working."
+  echo ""
 
   UPDATED=$(run_psql "UPDATE unit SET index_stage = 71 WHERE index_stage IN (79, 127, 255); SELECT COUNT(*) FROM unit WHERE index_stage = 71;")
   log_ok "Index stage reset complete. Units pending: $UPDATED"
@@ -188,11 +202,21 @@ show_monitoring() {
   log_info "Thumbnail generation will take 12-48 hours depending on library size."
   log_info "CPU will run at ~99% during this time. This is normal."
   echo ""
-  log_info "Monitor progress with:"
+  log_info "Monitor thumbnail progress (thumbnails should grow, queue should drain to 0):"
   printf "  ${CYAN}sudo -u postgres psql -d synofoto -c \"SELECT (SELECT COUNT(*) FROM thumbnail) as thumbnails, (SELECT COUNT(*) FROM index_queue) as queue;\"${NC}\n"
+  echo ""
+  log_info "Monitor queue breakdown by type:"
+  printf "  ${CYAN}sudo -u postgres psql -d synofoto -c \"SELECT type, COUNT(*) FROM index_queue GROUP BY type;\"${NC}\n"
+  log_info "  type 0 = metadata, type 2/3 = thumbnails. Metadata processes first."
   echo ""
   log_info "Check logs for errors:"
   printf "  ${CYAN}sudo tail -20 /var/packages/SynologyPhotos/var/log/synofoto.log${NC}\n"
+  echo ""
+  log_info "Validate filesystem vs DB when done (excludes @eaDir and #recycle):"
+  printf "  ${CYAN}find /volume1/photo -type f -not -path \"*@eaDir*\" -not -path \"*#recycle*\" | wc -l${NC}\n"
+  printf "  ${CYAN}find /volume1/homes -path \"*/Photos/*\" -type f -not -path \"*@eaDir*\" -not -path \"*#recycle*\" | wc -l${NC}\n"
+  printf "  ${CYAN}sudo -u postgres psql -d synofoto -c \"SELECT COUNT(*) FROM unit;\"${NC}\n"
+  log_info "  FS total will be slightly higher than DB (THM, WAV, LRV, PDF not indexed)."
   echo ""
   log_warn "DO NOT press 'Generate AVC previews' in Photos UI — it causes the video loop."
   echo ""
